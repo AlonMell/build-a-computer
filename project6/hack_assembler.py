@@ -34,7 +34,7 @@ class HackAssembler:
 
         self.__DEST = {
             "null": "000",
-            "M":    "001", "D":  "010", "DM": "011",
+            "M":    "001", "D":  "010", "MD": "011",
             "A":    "100", "AM": "101", "AD": "110",
             "ADM":  "111"
         }
@@ -52,7 +52,7 @@ class HackAssembler:
             "jump": self.__JUMP,
         }
 
-        self.__symbol_table = {
+        self.__PREDEFINED_SYMBOLS = {
             "R0":  0,  "R1":   1,  "R2":  2,  "R3":  3,
             "R4":  4,  "R5":   5,  "R6":  6,  "R7":  7,
             "R8":  8,  "R9":   9,  "R10": 10, "R11": 11,
@@ -61,6 +61,8 @@ class HackAssembler:
             "SP":  0,  "LCL":  1,  "ARG": 2,
             "THIS": 3, "THAT": 4
         }
+
+        self.__symbol_table = self.__PREDEFINED_SYMBOLS.copy()
 
     def __is_starts_with(self, line: str, symb: str) -> bool:
         return line.strip().startswith(symb)
