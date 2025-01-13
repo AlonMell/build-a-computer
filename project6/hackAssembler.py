@@ -2,16 +2,16 @@ import sys
 import os
 from typing import TextIO
 
-#TODO List:
-    #Wrap it into a class
-    #Probably put tables in separate file
-    #Refactor parse
-    #Enhancement preCompile
-    #Handle comments in the instrucation, probably do intermediate view with "clean" string
-    #In-depth Exceptions
-    #Probably use argparse
-    #Short comments near hard logic
-    #Tests
+"""TODO List:
+Probably put tables in separate file
+Enhancement preCompile
+Handle comments in the instrucation,
+    probably do intermediate view with "clean" string
+In-depth Exceptions
+Probably use argparse
+Short comments near hard logic
+Tests
+"""
 
 class HackAssembler:
     def __init__(self):
@@ -100,57 +100,71 @@ class HackAssembler:
             "jump": self.__jump,
         }
 
-        #Constants
+        self.__MACHINE_WORD = 16
+        self.__START_VAR_ADDR = 16
+
         self.__A = "@"
         self.__LABEL = "("
         self.__COMMENT = "//"
 
     def __skipLine(self, line: str) -> bool:
-        return not line.strip() or self.__isLineStartsWith(line, self.__COMMENT)
+        return (not line.strip()
+                or self.__isStartsWith(line, self.__COMMENT))
 
-    def __isLineStartsWith(self, line: str, sym: str) -> bool:
-        return line.strip().startswith(sym)
+    def __isStartsWith(self, line: str, symb: str) -> bool:
+        return line.strip().startswith(symb)
+
+    def __handleLabel(self, line: str, lineNumber: int) -> None:
+        label = line.strip()[1:-1]
+        if label not in self.__symbolTable:
+            self.__symbolTable[label] = lineNumber
 
     #TODO: Handle comments
-    def __preCompile(self, file: TextIO) -> None:
-        counter = 0
-        for line in file:
+    def __preCompile(self, asmFile: TextIO) -> None:
+        lineNumber = 0
+
+        for line in asmFile:
             if self.__skipLine(line):
                 continue
-            elif self.__isLineStartsWith(line, self.__LABEL):
-                label = line.strip()[1:-1]
-                if label not in self.__symbolTable:
-                    self.__symbolTable[label] = counter
+            elif self.__isStartsWith(line, self.__LABEL):
+                self.__handleLabel(line, lineNumber)
                 continue
-            counter += 1
+            lineNumber += 1
 
-    def __handleAInstruction(self, line: str, counter: list[int]) -> str:
+    def __handleAInstruction(
+        self,
+        line: str,
+        varAddr: list[int]
+    ) -> str:
         aInstr = line.strip()[1:]
 
         if aInstr.isdigit():
-            return bin(int(aInstr))[2:].zfill(16)
+            return bin(int(aInstr))[2:].zfill(self.__MACHINE_WORD)
         elif aInstr not in self.__symbolTable:
-            self.__symbolTable[aInstr] = counter[0]
-            counter[0] += 1
+            self.__symbolTable[aInstr] = varAddr[0]
+            varAddr[0] += 1
 
-        return bin(self.__symbolTable[aInstr])[2:].zfill(16)
+        return bin(self.__symbolTable[aInstr])[2:].zfill(self.__MACHINE_WORD)
 
     def __parse(self, line: str) -> str:
         firstLexIdx, secondLexIdx = line.find("="), line.find(";")
-        dest, comp, jump = "", "", ""
+        isFirstFind, isSecondFind = firstLexIdx != -1, secondLexIdx != -1
 
-        if firstLexIdx != -1 and secondLexIdx != -1:
+        dest = self.__cTable["dest"]["null"]
+        jump = self.__cTable["jump"]["null"]
+        comp = ""
+
+        if isFirstFind:
             dest = self.__cTable["dest"][line[:firstLexIdx]]
-            comp = self.__cTable["comp"][line[firstLexIdx+1:secondLexIdx]]
-            jump = self.__cTable["jump"][line[secondLexIdx:]]
-        elif firstLexIdx == -1 and secondLexIdx != -1:
-            dest = self.__cTable["dest"]["null"]
-            comp = self.__cTable["comp"][line[:secondLexIdx]]
+        if isSecondFind:
             jump = self.__cTable["jump"][line[secondLexIdx+1:]]
-        elif firstLexIdx != -1 and secondLexIdx == -1:
-            dest = self.__cTable["dest"][line[:firstLexIdx]]
+
+        if isFirstFind and isSecondFind:
+            comp = self.__cTable["comp"][line[firstLexIdx+1:secondLexIdx]]
+        elif not isFirstFind and isSecondFind:
+            comp = self.__cTable["comp"][line[:secondLexIdx]]
+        elif isFirstFind and not isSecondFind:
             comp = self.__cTable["comp"][line[firstLexIdx+1:]]
-            jump = self.__cTable["jump"]["null"]
         else:
             raise Exception("Compile error!")
 
@@ -159,29 +173,35 @@ class HackAssembler:
     def __handleCInstruction(self, line: str) -> str:
         return self.__parse(line.strip())
 
-    def __compile(self, inFile: TextIO, outFile: TextIO) -> None:
-        counter = 0
-        varCounter = [16]
+    def __compile(self, asmFile: TextIO, binFile: TextIO) -> None:
+        lineNumber = 0
+        varAddr = [self.__START_VAR_ADDR]
 
-        for line in inFile:
-            if self.__skipLine(line) or self.__isLineStartsWith(line, self.__LABEL):
+        for line in asmFile:
+            if (self.__skipLine(line)
+                or self.__isStartsWith(line, self.__LABEL)
+            ):
                 continue
-            elif self.__isLineStartsWith(line, self.__A):
-                res = self.__handleAInstruction(line, varCounter)
+            elif self.__isStartsWith(line, self.__A):
+                res = self.__handleAInstruction(line, varAddr)
             else:
                 res = self.__handleCInstruction(line)
-            counter += 1
-            print(res, file=outFile, end="\n")
+
+            lineNumber += 1
+            print(res, file=binFile)
 
     def Run(self, inFilePath: str, outFilePath: str = "") -> None:
         if outFilePath == "":
             fileName = os.path.splitext(os.path.basename(inFilePath))[0]
             outFilePath = f"./{fileName}.hack"
 
-        with open(inFilePath, "r") as asmFile, open(outFilePath, "w") as binaryFile:
+        with (
+            open(inFilePath, "r") as asmFile,
+            open(outFilePath, "w") as binFile
+        ):
             self.__preCompile(asmFile)
             asmFile.seek(0)
-            self.__compile(asmFile, binaryFile)
+            self.__compile(asmFile, binFile)
 
 def main():
     if len(sys.argv) != 2:
