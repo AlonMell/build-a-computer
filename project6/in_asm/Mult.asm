@@ -6,10 +6,10 @@
 @R2
 M=0
 
-@R0
+@R0 //Some comment
 D=M
 @val
-M=D
+M=D //Some comment
 
 @R1
 D=M
@@ -19,12 +19,12 @@ M=D
 @LOOP
 D;JGE
 
-@i
+@i //Some comment
 M=-M
 @val
 M=-M
 
-(LOOP)
+(LOOP) //Some comment
 @i
 M=M-1
 D=M
@@ -34,7 +34,7 @@ D;JLT
 @val
 D=M
 @R2
-M=D+M
+M=D+M //Some comment
 
 @LOOP
 0;JMP
