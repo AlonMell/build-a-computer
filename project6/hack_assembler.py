@@ -1,6 +1,14 @@
-import argparse
 import os
 from typing import TextIO
+
+"""TODO:
+    1. I/O Syscalls chunks
+    2. Threads with preprocessor and compile:
+        (READ + DECODE + INTER) -> (INTER + DECODE + WRITE)
+    3. Refactor __parse
+    4. Refactor if/else
+    5. | None ?
+    """
 
 class HackAssembler:
     def __init__(self):
@@ -105,16 +113,12 @@ class HackAssembler:
         a_instr = line[1:]
 
         if a_instr.isdigit():
-            return bin(
-                int(a_instr)
-            )[2:].zfill(self.__MACHINE_WORD)
+            return f"{int(a_instr):0{self.__MACHINE_WORD}b}"
         elif a_instr not in self.__symbol_table:
             self.__symbol_table[a_instr] = var_addr[0]
             var_addr[0] += 1
 
-        return bin(
-            self.__symbol_table[a_instr]
-        )[2:].zfill(self.__MACHINE_WORD)
+        return f"{self.__symbol_table[a_instr]:0{self.__MACHINE_WORD}b}"
 
     def __parse(self, line: str) -> str:
         dest_idx, jump_idx = line.find("="), line.find(";")
@@ -178,6 +182,8 @@ class HackAssembler:
             self.__compile(inter_code, bin_file)
 
 def parse_arguments():
+    import argparse
+
     parser = argparse.ArgumentParser(
         description="Hack Assembler for .asm files"
     )
