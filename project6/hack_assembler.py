@@ -1,14 +1,7 @@
 import os
 from typing import TextIO
-
-"""TODO:
-    1. I/O Syscalls chunks
-    2. Threads with preprocessor and compile:
-        (READ + DECODE + INTER) -> (INTER + DECODE + WRITE)
-    3. Refactor __parse
-    4. Refactor if/else
-    5. | None ?
-    """
+import cProfile
+import pstats
 
 class HackAssembler:
     def __init__(self):
@@ -76,9 +69,11 @@ class HackAssembler:
         return line.strip().startswith(symb)
 
     def __skip_line(self, line: str) -> bool:
+        cleaned_line = line.strip()
+
         return (
-            not line.strip()
-            or self.__is_starts_with(line, self.__COMMENT)
+            not cleaned_line
+            or cleaned_line.startswith(self.__COMMENT)
         )
 
     def __clean_line(self, line: str) -> str:
@@ -199,11 +194,29 @@ def parse_arguments():
         help="Path to the output .hack file",
         default=""
     )
+    parser.add_argument(
+        "-p",
+        "--profiling",
+        action="store_true",
+        help="Enable profiling"
+    )
 
     return parser.parse_args()
 
+def run_profiler(args):
+    with cProfile.Profile() as profile:
+        HackAssembler().Compile(args.inFile, args.outFile)
+
+    results = pstats.Stats(profile)
+    results.dump_stats("results.prof")
+
 def main():
     args = parse_arguments()
+
+    if args.profiling:
+        run_profiler(args)
+        return
+
     HackAssembler().Compile(args.inFile, args.outFile)
 
 if __name__ == "__main__":
