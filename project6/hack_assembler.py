@@ -1,7 +1,8 @@
-import os
-from typing import TextIO
 import cProfile
+import os
 import pstats
+from typing import TextIO
+
 
 class HackAssembler:
     def __init__(self):
@@ -71,10 +72,7 @@ class HackAssembler:
     def __skip_line(self, line: str) -> bool:
         cleaned_line = line.strip()
 
-        return (
-            not cleaned_line
-            or cleaned_line.startswith(self.__COMMENT)
-        )
+        return not cleaned_line or cleaned_line.startswith(self.__COMMENT)
 
     def __clean_line(self, line: str) -> str:
         return line.split(self.__COMMENT, 1)[0].strip()
@@ -90,21 +88,14 @@ class HackAssembler:
 
         for line in asm_file:
             if self.__is_starts_with(line, self.__LABEL):
-                self.__handle_label(
-                    self.__clean_line(line),
-                    line_number
-                )
+                self.__handle_label(self.__clean_line(line), line_number)
             elif not self.__skip_line(line):
                 inter_code.append(self.__clean_line(line))
                 line_number += 1
 
         return inter_code
 
-    def __handle_A_instruction(
-        self,
-        line: str,
-        var_addr: list[int]
-    ) -> str:
+    def __handle_a_instruction(self, line: str, var_addr: list[int]) -> str:
         a_instr = line[1:]
 
         if a_instr.isdigit():
@@ -129,86 +120,72 @@ class HackAssembler:
         if is_dest_find:
             dest = self.__C_TABLE["dest"][line[:dest_idx]]
         if is_jump_find:
-            jump = self.__C_TABLE["jump"][line[jump_idx+1:]]
+            jump = self.__C_TABLE["jump"][line[jump_idx + 1 :]]
 
         if is_dest_find and is_jump_find:
-            comp = self.__C_TABLE["comp"][line[dest_idx+1:jump_idx]]
+            comp = self.__C_TABLE["comp"][line[dest_idx + 1 : jump_idx]]
         elif not is_dest_find and is_jump_find:
             comp = self.__C_TABLE["comp"][line[:jump_idx]]
         else:
-            comp = self.__C_TABLE["comp"][line[dest_idx+1:]]
+            comp = self.__C_TABLE["comp"][line[dest_idx + 1 :]]
 
         return f"111{comp}{dest}{jump}"
 
-    def __handle_C_instruction(self, line: str) -> str:
+    def __handle_c_instruction(self, line: str) -> str:
         return self.__parse(line)
 
-    def __compile(
-        self,
-        inter_code: list[str],
-        bin_file: TextIO
-    ) -> None:
+    def __compile(self, inter_code: list[str], bin_file: TextIO) -> None:
         var_addr = [self.__START_VAR_ADDR]
 
         for instr in inter_code:
             res = ""
 
             if self.__is_starts_with(instr, self.__A):
-                res = self.__handle_A_instruction(instr, var_addr)
+                res = self.__handle_a_instruction(instr, var_addr)
             else:
-                res = self.__handle_C_instruction(instr)
+                res = self.__handle_c_instruction(instr)
 
             print(res, file=bin_file)
 
-    def Compile(
-        self,
-        in_file_path: str,
-        out_file_path: str = ""
-    ) -> None:
+    def compile(self, in_file_path: str, out_file_path: str = "") -> None:
         if out_file_path == "":
             file_name = os.path.basename(in_file_path)
             file_base_name, _ = os.path.splitext(file_name)
             out_file_path = f"./{file_base_name}.hack"
 
         inter_code = []
-        with open(in_file_path, "r") as asm_file:
+        with open(in_file_path) as asm_file:
             inter_code = self.__preprocess(asm_file)
         with open(out_file_path, "w") as bin_file:
             self.__compile(inter_code, bin_file)
 
+
 def parse_arguments():
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Hack Assembler for .asm files"
-    )
-    parser.add_argument(
-        "inFile",
-        type=str,
-        help="Path to the input .asm file"
-    )
+    parser = argparse.ArgumentParser(description="Hack Assembler for .asm files")
+    parser.add_argument("inFile", type=str, help="Path to the input .asm file")
     parser.add_argument(
         "-o",
         "--outFile",
         type=str,
         help="Path to the output .hack file",
-        default=""
+        default="",
     )
     parser.add_argument(
-        "-p",
-        "--profiling",
-        action="store_true",
-        help="Enable profiling"
+        "-p", "--profiling", action="store_true", help="Enable profiling"
     )
 
     return parser.parse_args()
 
+
 def run_profiler(args):
     with cProfile.Profile() as profile:
-        HackAssembler().Compile(args.inFile, args.outFile)
+        HackAssembler().compile(args.inFile, args.outFile)
 
     results = pstats.Stats(profile)
     results.dump_stats("results.prof")
+
 
 def main():
     args = parse_arguments()
@@ -217,7 +194,8 @@ def main():
         run_profiler(args)
         return
 
-    HackAssembler().Compile(args.inFile, args.outFile)
+    HackAssembler().compile(args.inFile, args.outFile)
+
 
 if __name__ == "__main__":
     main()
