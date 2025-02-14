@@ -1,6 +1,4 @@
-import cProfile
-import os
-import pstats
+from pathlib import Path
 from typing import TextIO
 
 from tables import C_TABLE, SYMBOLS
@@ -101,11 +99,14 @@ class HackAssembler:
 
             print(res, file=bin_file)
 
-    def compile(self, in_file_path: str, out_file_path: str = "") -> None:
+    def compile(self, in_file_path: str | Path, out_file_path: str | Path = "") -> None:
+        in_file_path = Path(in_file_path).resolve()
+
         if out_file_path == "":
-            file_name = os.path.basename(in_file_path)
-            file_base_name, _ = os.path.splitext(file_name)
-            out_file_path = f"./{file_base_name}.hack"
+            out_file = in_file_path.with_suffix(".hack")
+            out_file_path = Path(__file__).resolve().parent / out_file.name
+        else:
+            out_file_path = Path(out_file_path).resolve()
 
         inter_code = []
         with open(in_file_path) as asm_file:
@@ -134,6 +135,9 @@ def parse_arguments():
 
 
 def run_profiler(args):
+    import cProfile
+    import pstats
+
     with cProfile.Profile() as profile:
         HackAssembler().compile(args.inFile, args.outFile)
 

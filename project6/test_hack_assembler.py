@@ -1,24 +1,27 @@
 import os
+from pathlib import Path
 
 import pytest
 from hack_assembler import HackAssembler
 
-input_dir = "./in_asm"
-output_dir = "./out_hack"
-test_dir = "./tests_hack"
+PROJECT_DIR = Path(__file__).resolve().parent
+
+input_dir = PROJECT_DIR / "in_asm"
+output_dir = PROJECT_DIR / "out_hack"
+test_dir = PROJECT_DIR / "tests_hack"
 
 
 @pytest.mark.parametrize(
     "filename", [f for f in os.listdir(input_dir) if f.endswith(".asm")]
 )
-def test_assembler(filename: str):
-    file_base_name, _ = os.path.splitext(filename)
+def test_assembler(filename: str) -> None:
+    base_name = Path(filename).stem
 
-    in_file_path = f"{input_dir}/{file_base_name}.asm"
-    out_file_path = f"{output_dir}/{file_base_name}.hack"
-    tests_file_path = f"{test_dir}/{file_base_name}.hack"
+    input_path = input_dir / f"{base_name}.asm"
+    output_path = output_dir / f"{base_name}.hack"
+    expected_path = test_dir / f"{base_name}.hack"
 
-    HackAssembler().compile(in_file_path, out_file_path)
+    HackAssembler().compile(input_path, output_path)
 
-    with open(out_file_path) as f1, open(tests_file_path) as f2:
-        assert f1.read() == f2.read(), f"Files for {file_base_name} are not equal!"
+    with open(output_path) as f1, open(expected_path) as f2:
+        assert f1.read() == f2.read(), f"Files for {base_name} are not equal!"
